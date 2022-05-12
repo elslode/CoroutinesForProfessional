@@ -2,37 +2,28 @@ package com.elslode.coroutinesforprofessional
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
-import java.lang.RuntimeException
 
 class MainViewModel : ViewModel() {
 
-    private val parentJob = Job()
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + parentJob)
-
     fun method() {
-        val childJobOne = coroutineScope.launch {
-            delay(3000)
-            Log.d(TAG, "first coroutine finished")
+        val job = viewModelScope.launch(Dispatchers.Default) {
+            var count = 0
+            for (i in 0 until 100_000_000) {
+                for (j in 0 until 100) {
+                    count++
+                    ensureActive()
+                }
+            }
         }
-        val childJobTwo = coroutineScope.launch {
-            delay(2000)
-            Log.d(TAG, "second coroutine finished")
-        }
-        val childJobThree = coroutineScope.launch {
-            delay(1000)
-            error()
-            Log.d(TAG, "third coroutine finished")
-        }
-    }
 
-    private fun error(){
-        throw RuntimeException()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        coroutineScope.cancel()
+        job.invokeOnCompletion {
+            Log.d(TAG, "method: coroutine was canceled $it")
+        }
+        viewModelScope.launch {
+            job.cancel()
+        }
     }
 
     companion object {
